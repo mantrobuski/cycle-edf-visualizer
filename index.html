@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Cycle Conserving EDF</title>
+
+        <link rel="stylesheet" href="./style.css">
+    </head>
+    <body>
+
+        <h1>Cycle Conserving EDF Visualizer</h1>
+
+        <div>
+            <p>You can use whatever unit of time you want, just keep it consistant (start time is 0)</p>
+            <p>Enter tasks here:</p>
+            <table id="in">
+                <tr>
+                    <th>Name</th>
+                    <th>Release Time</th>
+                    <th>Execution Time</th>
+                    <th>Period</th>
+                    <th>Deadline</th>
+                    <th>Colour (Hex Code)</th>
+                </tr>
+                <tr class="taskInput">
+                    <td><input type="text" value="T1"></td>
+                    <td><input type="number"></td>
+                    <td><input type="number"></td>
+                    <td><input type="number"></td>
+                    <td><input type="number"></td>
+                    <td><input type="text" value="#AAAAAA" style="background-color: #AAAAAA"></td>
+                </tr>
+            </table>
+
+            <input class="button" type="button" value="Add Task" onclick="newTask();">
+            Simulation length: <input type="number" value=10 id="simlength">
+            <input class="button" type="button" value="Generate Schedule" onclick="generate();">
+
+
+        </div>
+
+        <canvas id="canvas"></canvas>
+
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+        <script src="./script.js"></script>
+
+    </body>
+</html>
