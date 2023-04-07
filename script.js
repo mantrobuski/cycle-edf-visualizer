@@ -7,7 +7,11 @@ class Task
 		this.execution = execution;
 		this.period = period;
 		this.deadline = deadline;
+		this.relative = deadline - release;
 		this.colour = colour;
+
+		this.nextDeadline = deadline;
+		this.nextRelease = release;
 	}
 
 	//see if a task is possible (based only on itself)
@@ -26,7 +30,6 @@ class Task
 
 let taskCount = 1;
 let tasks = [];
-
 
 //changes the background colour of the input box to match the entered hex value
 $('input').on('input', function(e)
@@ -91,6 +94,8 @@ function loadTasks()
 	return out;
 }
 
+//make this global
+let simLength;
 
 function generate()
 {
@@ -106,9 +111,6 @@ function generate()
 	draw(false);
 }
 
-//make this global
-let simLength;
-
 function draw(fixed)
 {
 
@@ -120,9 +122,17 @@ function draw(fixed)
 	ctx.fillStyle = "lightgrey";
 	ctx.fillRect(0, 0, width, height);
 
+	let axisPadding = 75;
+	let graphWidth = width - 2*axisPadding;
+	let graphHeight = height - axisPadding - height * 0.1;
 
+	//bottom axis
 	ctx.fillStyle = 'black';
-	ctx.fillRect(0, height - (height * 0.1), width, height*0.01);
+	ctx.fillRect(axisPadding, height - (height * 0.1), graphWidth, height*0.01);
+
+	//top axis
+	ctx.fillRect(axisPadding, axisPadding, height*0.01, height - (height * 0.1) - axisPadding);
+
 
 	let util = 0;
 	let periods = [];
@@ -161,16 +171,112 @@ function draw(fixed)
 
 	let spacing = 100;
 
-	let tickSize = simLength / (width / spacing); //how much time each tick will represent
-	console.log(tickSize)
-;
-	ctx.font = "10px Tahoma";
-	for(let i = 0; i < width; i += spacing)
-	{
-		let value = Math.round((i / simLength + Number.EPSILON) * 10) / 10
+	let timePerPixel = simLength / graphWidth;
+	console.log(timePerPixel);
 
-		ctx.fillRect(i, height - (height * 0.1), 2, 15);
-		ctx.fillText(value, i, height - (height * 0.1) + 30);
+	ctx.font = "10px Tahoma";
+	//draw ticks on the graph
+	for(let i = 0; i < graphWidth; i += spacing)
+	{
+		let x = i + axisPadding;
+
+		//adjust for offset
+		let value = Math.round((i * timePerPixel + Number.EPSILON) * 10) / 10
+
+		ctx.fillRect(x, height - (height * 0.1), 2, 15);
+		ctx.fillText(value, x, height - (height * 0.1) + 30);
 	}
 
+	sortTasks();
+
+	let simTime = 0;
+	let cycle = 0; // # of completed hyper periods
+
+	let freq = 1;
+
+	while(simTime <= simLength)
+	{
+		debugger;
+		//grab first task in sorted array (task with next deadline)
+		let cur = tasks[0];
+
+		//task with next deadline has not released yet
+		let i = 0;
+		let nearestRelease = tasks[0].nextRelease;
+
+		//break out when a task is released, or every task is checked
+		while(cur.nextRelease > simTime && i < tasks.length - 1)
+		{
+			cur = tasks[++i];
+			console.log(cur.name);
+			if(cur.nextRelease < nearestRelease) nearestRelease = cur.nextRelease; //keep track of smallest release
+		}
+
+		//need to advance time
+		if(cur.nextRelease > simTime)
+		{
+			simTime = nearestRelease;
+			continue; //skip rest of loop
+		}
+		
+		let x = (simTime / timePerPixel) + axisPadding; //divide to get pixelPerTime
+		let y = axisPadding + ((1-freq) * graphHeight); //where the top of the rect should be scaled for freq
+
+
+		let addTime = cur.execution / freq;
+
+		//gonna miss the deadline
+		let miss = false;
+		let missTime = 0;
+		if(simTime + addTime > cur.nextDeadline)
+		{
+			miss = true;
+			missTime = cur.nextDeadline;
+		}
+
+		if(miss)
+		{
+			//draw a big red line and write failure on screen
+
+		}
+
+		if(simTime + addTime > simLength) //gonna bleed over the edge
+		{
+			addTime = simLength - simTime; //make it go to the end
+		}
+
+		let sizeX = (addTime / timePerPixel);
+		let sizeY = graphHeight - (1-freq) * graphHeight;
+
+		ctx.fillStyle = cur.colour;
+		ctx.fillRect(x, y, sizeX, sizeY);
+
+		ctx.fillStyle = "#" + invertHex(cur.colour.substr(1)); //this is so it will always show up on the block
+		ctx.font = "15px Tahoma";
+		ctx.fillText(cur.name, (2 * x + sizeX) / 2, (2 * y + sizeY) / 2); //write name in center of the block
+	
+
+		cur.nextDeadline += cur.period;
+		cur.nextRelease += cur.period;
+
+		simTime += addTime;
+		sortTasks();
+	}	
+
 }
+
+function sortTasks()
+{
+	//sort first by deadline, then execution
+	tasks.sort( (x, y) => 
+	{
+		if(x.nextDeadline != y.nextDeadline) return x.nextDeadline - y.nextDeadline;
+		else return x.execution - y.execution;
+	});
+}
+
+//https://stackoverflow.com/questions/35969656/how-can-i-generate-the-opposite-color-according-to-current-color
+function invertHex(hex) {
+  return (Number(`0x1${hex}`) ^ 0xFFFFFF).toString(16).substr(1).toUpperCase()
+}
+
