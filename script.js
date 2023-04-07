@@ -63,6 +63,11 @@ function newTask()
                     <td><input type="number"></td>
                     <td><input type="number"></td>
                     <td><input type="text" value="#` + randomColor + `" style="background-color: #` + randomColor + `"><input type="button" class="delete" value="X" title="Delete task?" onclick="deleteTask(` + taskCount + `)"></td></tr>`);
+
+	$('input').on('input', function(e)
+	{
+		$(this).css('backgroundColor', $(this).val());
+	});
 }
 
 
@@ -227,11 +232,16 @@ function draw(fixed)
 		else freq = 0.5;
 	}
 
+	let freqTop = freq;
+
 	while(simTime <= simLength)
 	{
 		if(Math.floor(simTime / hyperPeriod) > cycle) 
 		{
 			cycle = Math.floor(simTime / hyperPeriod); //this will be useful for fixed freq to calc utilization
+
+			//reset freq to what it was at the beginning because its a new hyperperiod
+			freq = freqTop;
 
 			//reset each execution count because it'a a new hyperperiod
 			$.each(tasks, function(task)
@@ -295,6 +305,7 @@ function draw(fixed)
 		ctx.fillText(Math.round((simTime + Number.EPSILON) * 10) / 10, simTime/timePerPixel + axisPadding, y - 10);
 
 		simTime += addTime; //update the time after the box is drawn
+		cur.executions = cur.executions + 1; //increment counter of executions
 
 		ctx.fillStyle = "#" + invertHex(cur.colour.substr(1)); //this is so it will always show up on the block
 		ctx.font = "15px Tahoma";
@@ -324,31 +335,33 @@ function draw(fixed)
 
 		//update utilization
 		util = 0;
-		for(let i = 0; i < tasks.length; i++)
-		{
-			let task = tasks[i];
-
-			if(task.nextRelease >= (cycle + 1) * hyperPeriod)  continue;//won't run for the rest of this cycle
-
-			let factor = hyperPeriod / task.period; //this always divides perfeclty by definition of hyperperiod
-
-			let mod = simTime % hyperPeriod; //how much time has gone into this hyper period
-
-			util += ((factor - task.executions) * task.execution) / hyperPeriod;
-
-			//calc how many executions are left in the hyper period
-			//let executionsLeft = factor - 
-
-		}
-
-		if(util < 1) freq = util;
+		let totalExecutionTime = 0;
+		let intervalStart = simTime;
+		let intervalEnd = (cycle + 1) * hyperPeriod; //end of current cycle;
 
 		if(fixed)
 		{
-			if(util > 0.75) freq = 1;
+
+			for(let i = 0; i < tasks.length; i++)
+			{
+				let task = tasks[i];
+			    
+			    let factor = hyperPeriod / task.period; //this is how many times the task will execute per hyperperiod
+
+			    totalExecutionTime += (factor - task.executions) * task.execution //number of executions left * execution time
+			    //debugger;
+			}
+
+			util = totalExecutionTime / (intervalEnd - intervalStart);
+
+			if(util > 1) freq = 1; //going to fail somewhere
+			else if(util == 0 || util == -0 || util < 0) freq; //don't do anything because util has a weird value
+			else if(util > 0.75) freq = 1;
 			else if(util > 0.5) freq = 0.75;
 			else freq = 0.5;
 		}
+		
+
 
 		sortTasks();
 	}	
