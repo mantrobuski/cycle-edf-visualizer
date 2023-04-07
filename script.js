@@ -44,14 +44,20 @@ function newTask()
 	//generates random colour
 	let randomColor = Math.floor(Math.random()*16777215).toString(16);
 
-	$('#in').append(`<tr class="taskInput"><td><input type="text" value="T` + ++taskCount + `"></td>
+	$('#in').append(`<tr class="taskInput" id="T` + ++taskCount + `"><td><input type="text" value="T` + taskCount + `"></td>
                     <td><input type="number"></td>
                     <td><input type="number"></td>
                     <td><input type="number"></td>
                     <td><input type="number"></td>
-                    <td><input type="text" value="#` + randomColor + `" style="background-color: #` + randomColor + `"></td></tr>`);
+                    <td><input type="text" value="#` + randomColor + `" style="background-color: #` + randomColor + `"><input type="button" class="delete" value="X" title="Delete task?" onclick="deleteTask(` + taskCount + `)"></td></tr>`);
 }
 
+
+function deleteTask(id)
+{
+	console.log('deleting task: ' + id);
+	$('#T' + id).remove();
+}
 
 function loadTasks()
 {
@@ -119,7 +125,7 @@ function draw(fixed)
 	const height = canvas.height = 0.5 * window.innerHeight;
 	const ctx = canvas.getContext("2d");
 
-	ctx.fillStyle = "lightgrey";
+	ctx.fillStyle = "white";
 	ctx.fillRect(0, 0, width, height);
 
 	let axisPadding = 75;
@@ -149,7 +155,8 @@ function draw(fixed)
 			return;
 		}
 
-		util += current.execution / (current.deadline - current.release); //relative deadline
+		util += current.execution / Math.min((current.deadline - current.release), current.period); //relative deadline
+		//util += current.execution / current.period;
 
 		periods.push(current.period);
 	}
@@ -167,11 +174,10 @@ function draw(fixed)
 	const lcm = (a, b) => a * b / gcd(a, b);
 
 	const hyperPeriod = periods.reduce(lcm);
-	//only have to run for one hyperperiod and then can just copy that over and over again
 
-	let spacing = 100;
+	const spacing = 100;
 
-	let timePerPixel = simLength / graphWidth;
+	const timePerPixel = simLength / graphWidth;
 	console.log(timePerPixel);
 
 	ctx.font = "10px Tahoma";
@@ -193,9 +199,12 @@ function draw(fixed)
 	let cycle = 0; // # of completed hyper periods
 
 	let freq = 1;
+	if(util < 1) freq = util;
 
 	while(simTime <= simLength)
 	{
+		if(Math.floor(simTime / hyperPeriod) > cycle) cycle = Math.floor(simTime / hyperPeriod); //this will be useful for fixed freq to calc utilization
+
 		debugger;
 		//grab first task in sorted array (task with next deadline)
 		let cur = tasks[0];
@@ -234,11 +243,7 @@ function draw(fixed)
 			missTime = cur.nextDeadline;
 		}
 
-		if(miss)
-		{
-			//draw a big red line and write failure on screen
-
-		}
+		
 
 		if(simTime + addTime > simLength) //gonna bleed over the edge
 		{
@@ -251,15 +256,34 @@ function draw(fixed)
 		ctx.fillStyle = cur.colour;
 		ctx.fillRect(x, y, sizeX, sizeY);
 
+		//start of execution
+		ctx.font = "10px Tahoma";
+		ctx.fillText(Math.round((simTime + Number.EPSILON) * 10) / 10, simTime/timePerPixel + axisPadding, y - 10);
+
+		simTime += addTime; //update the time after the box is drawn
+
 		ctx.fillStyle = "#" + invertHex(cur.colour.substr(1)); //this is so it will always show up on the block
 		ctx.font = "15px Tahoma";
 		ctx.fillText(cur.name, (2 * x + sizeX) / 2, (2 * y + sizeY) / 2); //write name in center of the block
+
+		ctx.font = "10px Tahoma";
+		ctx.fillText(Math.round((simTime + Number.EPSILON) * 10) / 10, simTime/timePerPixel + axisPadding, y - 10);
+
+		if(miss)
+		{
+			ctx.fillStyle = 'red';
+			ctx.fillRect(missTime / timePerPixel + axisPadding, axisPadding, 10, graphHeight);
+
+			ctx.fillStyle = 'black';
+			ctx.fillText('DEADLINE MISSED at t=' + missTime, x, axisPadding - 30);
+
+			break;//stop because deadline was missed
+		}
 	
 
 		cur.nextDeadline += cur.period;
 		cur.nextRelease += cur.period;
 
-		simTime += addTime;
 		sortTasks();
 	}	
 

@@ -15,7 +15,20 @@ h1, div
 	padding: 10px;
 }
 
+h1
+{
+	text-align: center;
+}
+
 .button
 {
 	padding: 5px;
+
+	cursor: pointer;
+}
+
+.delete
+{
+	color: red;
+	cursor: pointer;
 }

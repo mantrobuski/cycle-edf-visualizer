@@ -11,8 +11,10 @@
         <h1>Cycle Conserving EDF Visualizer</h1>
 
         <div>
-            <p>You can use whatever unit of time you want, just keep it consistant (start time is 0)</p>
-            <p>Enter tasks here:</p>
+            <p>
+                You can use whatever unit of time you want, just keep it consistant (start time is 0)<br>
+                Enter tasks here:
+            </p>
             <table id="in">
                 <tr>
                     <th>Name</th>
@@ -32,7 +34,7 @@
                 </tr>
             </table>
 
-            <input class="button" type="button" value="Add Task" onclick="newTask();">
+            <input class="button" type="button" value="Add Task" onclick="newTask();"><br>
             Simulation length: <input type="number" value=10 id="simlength">
             <input class="button" type="button" value="Generate Schedule" onclick="generate();">
 
