@@ -5,6 +5,9 @@
         <title>Cycle Conserving EDF</title>
 
         <link rel="stylesheet" href="./style.css">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@300&display=swap" rel="stylesheet">
     </head>
     <body>
 
@@ -34,12 +37,20 @@
                 </tr>
             </table>
 
-            <input class="button" type="button" value="Add Task" onclick="newTask();"><br>
+            <br>
+
+            <input class="button" type="button" value="Add Task" onclick="newTask();"><br><br>
             Simulation length: <input type="number" value=10 id="simlength">
             <input class="button" type="button" value="Generate Schedule" onclick="generate();">
 
+            <select id="rates">
+                <option value="any">Any frequency</option>
+                <option value="fixed">Fmax, 0.75Fmax, 0.5Fmax></option>
+            </select>
 
         </div>
+
+        
 
         <canvas id="canvas"></canvas>
 

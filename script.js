@@ -12,6 +12,8 @@ class Task
 
 		this.nextDeadline = deadline;
 		this.nextRelease = release;
+
+		this.executions = 0; //this is so I have to do less math
 	}
 
 	//see if a task is possible (based only on itself)
@@ -30,6 +32,17 @@ class Task
 
 let taskCount = 1;
 let tasks = [];
+
+//initially hide the rates selector
+let freqFixed = false;
+$('#rates').hide();
+$('#rates').change(function()
+{
+	if($(this).val() == 'any') freqFixed = false;
+	else freqFixed = true;
+
+	generate();
+});
 
 //changes the background colour of the input box to match the entered hex value
 $('input').on('input', function(e)
@@ -69,10 +82,11 @@ function loadTasks()
 	{
 		let vals = [];
 		//for each data point in the task
-		$('input', this).each(function()
+		$('input:not([button])', this).each(function()
 		{
 			if($(this).val() == '')
 			{
+				console.log('no val');
 				valid = false;
 				return false;
 			}
@@ -80,8 +94,9 @@ function loadTasks()
 			vals.push($(this).val());
 		});
 
-		if(vals.length !== 6)
+		if(vals.length < 6)
 		{
+			console.log('wrong length');
 			valid = false;
 			return false;
 		}
@@ -113,8 +128,11 @@ function generate()
 	//set simlength
 	simLength = Number($('#simlength').val());
 
-	//start not fixed
-	draw(false);
+	
+	draw(freqFixed);
+
+	$('#rates').show();
+
 }
 
 function draw(fixed)
@@ -135,9 +153,6 @@ function draw(fixed)
 	//bottom axis
 	ctx.fillStyle = 'black';
 	ctx.fillRect(axisPadding, height - (height * 0.1), graphWidth, height*0.01);
-
-	//top axis
-	ctx.fillRect(axisPadding, axisPadding, height*0.01, height - (height * 0.1) - axisPadding);
 
 
 	let util = 0;
@@ -181,6 +196,10 @@ function draw(fixed)
 	console.log(timePerPixel);
 
 	ctx.font = "10px Tahoma";
+
+	//frequency legend
+	ctx.fillText('Fraction of FMax', 20, axisPadding - 25);
+
 	//draw ticks on the graph
 	for(let i = 0; i < graphWidth; i += spacing)
 	{
@@ -201,11 +220,26 @@ function draw(fixed)
 	let freq = 1;
 	if(util < 1) freq = util;
 
+	if(fixed)
+	{
+		if(util > 0.75) freq = 1;
+		else if(util > 0.5) freq = 0.75;
+		else freq = 0.5;
+	}
+
 	while(simTime <= simLength)
 	{
-		if(Math.floor(simTime / hyperPeriod) > cycle) cycle = Math.floor(simTime / hyperPeriod); //this will be useful for fixed freq to calc utilization
+		if(Math.floor(simTime / hyperPeriod) > cycle) 
+		{
+			cycle = Math.floor(simTime / hyperPeriod); //this will be useful for fixed freq to calc utilization
 
-		debugger;
+			//reset each execution count because it'a a new hyperperiod
+			$.each(tasks, function(task)
+			{
+				task.executions = 0;
+			});
+		}
+
 		//grab first task in sorted array (task with next deadline)
 		let cur = tasks[0];
 
@@ -269,6 +303,9 @@ function draw(fixed)
 		ctx.font = "10px Tahoma";
 		ctx.fillText(Math.round((simTime + Number.EPSILON) * 10) / 10, simTime/timePerPixel + axisPadding, y - 10);
 
+		ctx.fillStyle = 'black';
+		ctx.fillText(Math.round((freq + Number.EPSILON) * 100) / 100, axisPadding - 25, y); 
+
 		if(miss)
 		{
 			ctx.fillStyle = 'red';
@@ -284,8 +321,41 @@ function draw(fixed)
 		cur.nextDeadline += cur.period;
 		cur.nextRelease += cur.period;
 
+
+		//update utilization
+		util = 0;
+		for(let i = 0; i < tasks.length; i++)
+		{
+			let task = tasks[i];
+
+			if(task.nextRelease >= (cycle + 1) * hyperPeriod)  continue;//won't run for the rest of this cycle
+
+			let factor = hyperPeriod / task.period; //this always divides perfeclty by definition of hyperperiod
+
+			let mod = simTime % hyperPeriod; //how much time has gone into this hyper period
+
+			util += ((factor - task.executions) * task.execution) / hyperPeriod;
+
+			//calc how many executions are left in the hyper period
+			//let executionsLeft = factor - 
+
+		}
+
+		if(util < 1) freq = util;
+
+		if(fixed)
+		{
+			if(util > 0.75) freq = 1;
+			else if(util > 0.5) freq = 0.75;
+			else freq = 0.5;
+		}
+
 		sortTasks();
 	}	
+
+	//draw top axis after
+	ctx.fillStyle = 'black';
+	ctx.fillRect(axisPadding, axisPadding, height*0.01, height - (height * 0.1) - axisPadding);
 
 }
 
